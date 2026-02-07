@@ -2,6 +2,7 @@ import type Database from 'better-sqlite3';
 import { nanoid } from 'nanoid';
 import { NotFoundError, ForbiddenError } from '../middleware/error.middleware.js';
 import type { PaginatedResult } from './project.service.js';
+import { notifyTaskAssigned, notifyTaskStatusChanged } from './notification.client.js';
 
 export type TaskStatus = 'todo' | 'in_progress' | 'review' | 'done';
 export type TaskPriority = 'low' | 'medium' | 'high' | 'critical';
@@ -239,6 +240,20 @@ export class TaskService {
       SET title = ?, description = ?, status = ?, priority = ?, assignee_id = ?, due_date = ?, tags = ?, updated_at = ?
       WHERE id = ?
     `).run(title, description, status, priority, assigneeId, dueDate, tags, now, taskId);
+
+    // Fire-and-forget notifications
+    if (input.assigneeId && input.assigneeId !== task.assigneeId) {
+      notifyTaskAssigned(taskId, title, input.assigneeId, userId);
+    }
+
+    if (input.status && input.status !== task.status) {
+      const notifyUserIds: string[] = [];
+      if (task.assigneeId) notifyUserIds.push(task.assigneeId);
+      if (task.createdBy && !notifyUserIds.includes(task.createdBy)) {
+        notifyUserIds.push(task.createdBy);
+      }
+      notifyTaskStatusChanged(taskId, title, task.status, input.status, userId, notifyUserIds);
+    }
 
     return {
       ...task,
