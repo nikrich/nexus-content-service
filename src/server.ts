@@ -4,6 +4,7 @@ import type Database from 'better-sqlite3';
 import { getDatabase } from './db/client.js';
 import healthRoutes from './routes/health.routes.js';
 import projectRoutes from './routes/projects.routes.js';
+import taskRoutes from './routes/tasks.routes.js';
 import { errorHandler, NotFoundError } from './middleware/error.middleware.js';
 
 export interface AppOptions {
@@ -25,6 +26,7 @@ export function createApp(options: AppOptions = {}) {
   // Routes
   app.use(healthRoutes);
   app.use(projectRoutes);
+  app.use(taskRoutes);
 
   // 404 handler
   app.use((_req, _res, next) => {
