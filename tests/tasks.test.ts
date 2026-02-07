@@ -92,6 +92,49 @@ describe('Tasks API', () => {
         .send({ description: 'No title' });
 
       expect(res.status).toBe(400);
+      expect(res.body.error.code).toBe('VALIDATION_ERROR');
+      expect(res.body.error.details).toBeDefined();
+    });
+
+    it('rejects task with empty title', async () => {
+      const res = await request(app)
+        .post(`/projects/${projectId}/tasks`)
+        .set(authHeaders('user1'))
+        .send({ title: '' });
+
+      expect(res.status).toBe(400);
+      expect(res.body.error.code).toBe('VALIDATION_ERROR');
+    });
+
+    it('rejects task with invalid priority', async () => {
+      const res = await request(app)
+        .post(`/projects/${projectId}/tasks`)
+        .set(authHeaders('user1'))
+        .send({ title: 'Task', priority: 'urgent' });
+
+      expect(res.status).toBe(400);
+      expect(res.body.error.code).toBe('VALIDATION_ERROR');
+    });
+
+    it('rejects task with invalid dueDate format', async () => {
+      const res = await request(app)
+        .post(`/projects/${projectId}/tasks`)
+        .set(authHeaders('user1'))
+        .send({ title: 'Task', dueDate: 'not-a-date' });
+
+      expect(res.status).toBe(400);
+      expect(res.body.error.code).toBe('VALIDATION_ERROR');
+    });
+
+    it('defaults priority to medium and tags to empty', async () => {
+      const res = await request(app)
+        .post(`/projects/${projectId}/tasks`)
+        .set(authHeaders('user1'))
+        .send({ title: 'Default Task' });
+
+      expect(res.status).toBe(201);
+      expect(res.body.data.priority).toBe('medium');
+      expect(res.body.data.tags).toEqual([]);
     });
   });
 
@@ -326,6 +369,23 @@ describe('Tasks API', () => {
 
       expect(res.status).toBe(200);
       expect(res.body.data.tags).toEqual(['new', 'updated']);
+    });
+
+    it('rejects update with invalid status', async () => {
+      const createRes = await request(app)
+        .post(`/projects/${projectId}/tasks`)
+        .set(authHeaders('user1'))
+        .send({ title: 'Valid' });
+
+      const taskId = createRes.body.data.id;
+
+      const res = await request(app)
+        .patch(`/tasks/${taskId}`)
+        .set(authHeaders('user1'))
+        .send({ status: 'invalid_status' });
+
+      expect(res.status).toBe(400);
+      expect(res.body.error.code).toBe('VALIDATION_ERROR');
     });
 
     it('rejects update by non-member', async () => {
