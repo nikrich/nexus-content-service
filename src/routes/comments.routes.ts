@@ -1,8 +1,9 @@
 import { Router } from 'express';
 import type { Request, Response } from 'express';
 import { authMiddleware } from '../middleware/auth.middleware.js';
+import { validateBody } from '../middleware/validate.middleware.js';
 import { CommentService } from '../services/comment.service.js';
-import { ValidationError } from '../middleware/error.middleware.js';
+import { createCommentSchema } from '../schemas/validation.js';
 
 const router = Router();
 
@@ -13,14 +14,10 @@ function getCommentService(req: Request): CommentService {
 
 // POST /tasks/:taskId/comments - Add comment (member)
 router.post('/tasks/:taskId/comments', authMiddleware, (req: Request, res: Response) => {
-  const { body } = req.body;
-
-  if (!body || typeof body !== 'string') {
-    throw new ValidationError('Comment body is required');
-  }
+  const data = validateBody(createCommentSchema, req.body);
 
   const service = getCommentService(req);
-  const comment = service.createComment(req.params.taskId, req.user!.userId, body);
+  const comment = service.createComment(req.params.taskId, req.user!.userId, data.body);
 
   res.status(201).json({ success: true, data: comment });
 });

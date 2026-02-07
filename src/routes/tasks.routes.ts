@@ -1,8 +1,13 @@
 import { Router } from 'express';
 import type { Request, Response } from 'express';
 import { authMiddleware } from '../middleware/auth.middleware.js';
+import { validateBody, validateQuery } from '../middleware/validate.middleware.js';
 import { TaskService } from '../services/task.service.js';
-import { ValidationError } from '../middleware/error.middleware.js';
+import {
+  createTaskSchema,
+  updateTaskSchema,
+  taskFilterQuerySchema,
+} from '../schemas/validation.js';
 
 const router = Router();
 
@@ -13,38 +18,20 @@ function getTaskService(req: Request): TaskService {
 
 // POST /projects/:projectId/tasks - Create task (member)
 router.post('/projects/:projectId/tasks', authMiddleware, (req: Request, res: Response) => {
-  const { title, description, priority, assigneeId, dueDate, tags } = req.body;
-
-  if (!title || typeof title !== 'string') {
-    throw new ValidationError('Title is required');
-  }
+  const data = validateBody(createTaskSchema, req.body);
 
   const service = getTaskService(req);
-  const task = service.createTask(req.params.projectId, req.user!.userId, {
-    title,
-    description,
-    priority,
-    assigneeId,
-    dueDate,
-    tags,
-  });
+  const task = service.createTask(req.params.projectId, req.user!.userId, data);
 
   res.status(201).json({ success: true, data: task });
 });
 
 // GET /projects/:projectId/tasks - List tasks (with filtering, sorting, pagination)
 router.get('/projects/:projectId/tasks', authMiddleware, (req: Request, res: Response) => {
+  const filters = validateQuery(taskFilterQuerySchema, req.query);
+
   const service = getTaskService(req);
-  const result = service.listTasks(req.params.projectId, req.user!.userId, {
-    status: req.query.status as string | undefined,
-    priority: req.query.priority as string | undefined,
-    assigneeId: req.query.assigneeId as string | undefined,
-    search: req.query.search as string | undefined,
-    sortBy: req.query.sortBy as string | undefined,
-    sortOrder: req.query.sortOrder as string | undefined,
-    page: parseInt(req.query.page as string) || undefined,
-    pageSize: parseInt(req.query.pageSize as string) || undefined,
-  });
+  const result = service.listTasks(req.params.projectId, req.user!.userId, filters);
 
   res.json({ success: true, data: result });
 });
@@ -59,17 +46,10 @@ router.get('/tasks/:id', authMiddleware, (req: Request, res: Response) => {
 
 // PATCH /tasks/:id - Update task (member)
 router.patch('/tasks/:id', authMiddleware, (req: Request, res: Response) => {
-  const { title, description, status, priority, assigneeId, dueDate, tags } = req.body;
+  const data = validateBody(updateTaskSchema, req.body);
+
   const service = getTaskService(req);
-  const task = service.updateTask(req.params.id, req.user!.userId, {
-    title,
-    description,
-    status,
-    priority,
-    assigneeId,
-    dueDate,
-    tags,
-  });
+  const task = service.updateTask(req.params.id, req.user!.userId, data);
 
   res.json({ success: true, data: task });
 });

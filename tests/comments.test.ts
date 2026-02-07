@@ -78,6 +78,28 @@ describe('Comments API', () => {
         .send({});
 
       expect(res.status).toBe(400);
+      expect(res.body.error.code).toBe('VALIDATION_ERROR');
+      expect(res.body.error.details).toBeDefined();
+    });
+
+    it('rejects comment with empty body', async () => {
+      const res = await request(app)
+        .post(`/tasks/${taskId}/comments`)
+        .set(authHeaders('user1'))
+        .send({ body: '' });
+
+      expect(res.status).toBe(400);
+      expect(res.body.error.code).toBe('VALIDATION_ERROR');
+    });
+
+    it('rejects comment with body exceeding max length', async () => {
+      const res = await request(app)
+        .post(`/tasks/${taskId}/comments`)
+        .set(authHeaders('user1'))
+        .send({ body: 'x'.repeat(5001) });
+
+      expect(res.status).toBe(400);
+      expect(res.body.error.code).toBe('VALIDATION_ERROR');
     });
 
     it('returns 404 for nonexistent task', async () => {

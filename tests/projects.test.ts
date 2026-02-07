@@ -65,6 +65,39 @@ describe('Projects API', () => {
         .send({ description: 'No name' });
 
       expect(res.status).toBe(400);
+      expect(res.body.success).toBe(false);
+      expect(res.body.error.code).toBe('VALIDATION_ERROR');
+      expect(res.body.error.details).toBeDefined();
+    });
+
+    it('returns 400 with empty name', async () => {
+      const res = await request(app)
+        .post('/projects')
+        .set(authHeaders())
+        .send({ name: '' });
+
+      expect(res.status).toBe(400);
+      expect(res.body.error.code).toBe('VALIDATION_ERROR');
+    });
+
+    it('returns 400 with name exceeding max length', async () => {
+      const res = await request(app)
+        .post('/projects')
+        .set(authHeaders())
+        .send({ name: 'a'.repeat(201) });
+
+      expect(res.status).toBe(400);
+      expect(res.body.error.code).toBe('VALIDATION_ERROR');
+    });
+
+    it('defaults description to empty string', async () => {
+      const res = await request(app)
+        .post('/projects')
+        .set(authHeaders())
+        .send({ name: 'No Desc' });
+
+      expect(res.status).toBe(201);
+      expect(res.body.data.description).toBe('');
     });
   });
 
