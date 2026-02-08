@@ -80,9 +80,9 @@ router.post('/projects/:id/members', authMiddleware, (req: Request, res: Respons
   const data = validateBody(addMemberSchema, req.body);
 
   const service = getProjectService(req);
-  service.addMember(req.params.id, data.userId, req.user!.userId);
+  const member = service.addMember(req.params.id, data.userId, req.user!.userId, req.body.role);
 
-  res.status(201).json({ success: true, data: { message: 'Member added' } });
+  res.status(201).json({ success: true, data: member });
 });
 
 // PATCH /projects/:id/members/:userId - Update member role (owner only)

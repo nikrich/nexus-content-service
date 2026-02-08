@@ -147,7 +147,7 @@ export class ProjectService {
   listMembers(projectId: string): { id: string; projectId: string; userId: string; role: string }[] {
     this.getProjectById(projectId);
     const rows = this.db.prepare(
-      'SELECT project_id, user_id, role FROM project_members WHERE project_id = ?'
+      "SELECT project_id, user_id, role FROM project_members WHERE project_id = ? AND role != 'owner'"
     ).all(projectId) as { project_id: string; user_id: string; role: string }[];
     return rows.map((r) => ({
       id: r.user_id,
@@ -176,7 +176,7 @@ export class ProjectService {
     return { id: userId, projectId, userId, role };
   }
 
-  addMember(projectId: string, userId: string, requesterId: string): void {
+  addMember(projectId: string, userId: string, requesterId: string, role: string = 'member'): { id: string; projectId: string; userId: string; role: string } {
     this.getProjectById(projectId);
     this.ensureOwner(projectId, requesterId);
 
@@ -188,9 +188,12 @@ export class ProjectService {
       throw new ForbiddenError('User is already a member of this project');
     }
 
-    this.db.prepare(`
-      INSERT INTO project_members (project_id, user_id, role) VALUES (?, ?, 'member')
-    `).run(projectId, userId);
+    const validRole = ['member', 'viewer'].includes(role) ? role : 'member';
+    this.db.prepare(
+      'INSERT INTO project_members (project_id, user_id, role) VALUES (?, ?, ?)'
+    ).run(projectId, userId, validRole);
+
+    return { id: userId, projectId, userId, role: validRole };
   }
 
   removeMember(projectId: string, userId: string, requesterId: string): void {
