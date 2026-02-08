@@ -144,6 +144,38 @@ export class ProjectService {
     this.db.prepare('DELETE FROM projects WHERE id = ?').run(id);
   }
 
+  listMembers(projectId: string): { id: string; projectId: string; userId: string; role: string }[] {
+    this.getProjectById(projectId);
+    const rows = this.db.prepare(
+      'SELECT project_id, user_id, role FROM project_members WHERE project_id = ?'
+    ).all(projectId) as { project_id: string; user_id: string; role: string }[];
+    return rows.map((r) => ({
+      id: r.user_id,
+      projectId: r.project_id,
+      userId: r.user_id,
+      role: r.role,
+    }));
+  }
+
+  updateMemberRole(projectId: string, userId: string, role: string, requesterId: string): { id: string; projectId: string; userId: string; role: string } {
+    this.getProjectById(projectId);
+    this.ensureOwner(projectId, requesterId);
+
+    const existing = this.db.prepare(
+      'SELECT * FROM project_members WHERE project_id = ? AND user_id = ?'
+    ).get(projectId, userId) as { project_id: string; user_id: string; role: string } | undefined;
+
+    if (!existing) {
+      throw new NotFoundError('Member not found');
+    }
+
+    this.db.prepare(
+      'UPDATE project_members SET role = ? WHERE project_id = ? AND user_id = ?'
+    ).run(role, projectId, userId);
+
+    return { id: userId, projectId, userId, role };
+  }
+
   addMember(projectId: string, userId: string, requesterId: string): void {
     this.getProjectById(projectId);
     this.ensureOwner(projectId, requesterId);

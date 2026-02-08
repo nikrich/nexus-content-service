@@ -67,6 +67,14 @@ router.delete('/projects/:id', authMiddleware, (req: Request, res: Response) => 
   res.status(204).send();
 });
 
+// GET /projects/:id/members - List project members
+router.get('/projects/:id/members', authMiddleware, (req: Request, res: Response) => {
+  const service = getProjectService(req);
+  const members = service.listMembers(req.params.id);
+
+  res.json({ success: true, data: members });
+});
+
 // POST /projects/:id/members - Add member (owner only)
 router.post('/projects/:id/members', authMiddleware, (req: Request, res: Response) => {
   const data = validateBody(addMemberSchema, req.body);
@@ -75,6 +83,16 @@ router.post('/projects/:id/members', authMiddleware, (req: Request, res: Respons
   service.addMember(req.params.id, data.userId, req.user!.userId);
 
   res.status(201).json({ success: true, data: { message: 'Member added' } });
+});
+
+// PATCH /projects/:id/members/:userId - Update member role (owner only)
+router.patch('/projects/:id/members/:userId', authMiddleware, (req: Request, res: Response) => {
+  const { role } = req.body;
+
+  const service = getProjectService(req);
+  const member = service.updateMemberRole(req.params.id, req.params.userId, role, req.user!.userId);
+
+  res.json({ success: true, data: member });
 });
 
 // DELETE /projects/:id/members/:userId - Remove member (owner only)
